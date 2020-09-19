@@ -112,7 +112,7 @@ function createHuman() {
       let choice;
       while (true) {
         console.log('Please choose rock, paper, scissors, spock, or lizard');
-        choice = readline.question();
+        choice = readline.question().toLowerCase();
         if (Object.values(VALID_CHOICES).some(ele => ele.includes(choice))) {
           choice = Object.keys(VALID_CHOICES).find(ele => VALID_CHOICES[ele].includes(choice));
           break;
@@ -245,8 +245,8 @@ const RPSGame = {
         this.round.displayWinner(this.human.move, this.computer.move);
         this.winLossHistory.updateMovesData(this.round.winner, this.round.winnerMove, this.round.looserMove);
         this.computer.updatePool(this.round.winner, this.round.winnerMove, this.round.lossMove);
-        //console.log(this.human); testing
-        //console.log(this.computer); testing
+        //console.log(this.human); //testing
+        //console.log(this.computer); //testing
         this.grandGame.updateScore(this.round.winner);
         this.grandGame.displayScore();
         if (this.grandGame.gotGrandWinner()) {
