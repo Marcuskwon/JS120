@@ -88,8 +88,8 @@ function createComputerMovePool() {
     pool: ['rock', 'paper', 'scissors', 'lizard', 'spock'],
 
     //updatePool:
-    //I decided to add a move when computer won with that move
-    //to increase possibility of choosing that move next game,
+    //I decided to add a move when computer wins with that move to increase
+    //possibility of choosing that move next game,
     //and remove it to decrease its possibility of choosing it next game.
     updatePool(winner, winMove, lossMove) {
       if (winner === 'computer') {
@@ -245,8 +245,8 @@ const RPSGame = {
         this.round.displayWinner(this.human.move, this.computer.move);
         this.winLossHistory.updateMovesData(this.round.winner, this.round.winnerMove, this.round.looserMove);
         this.computer.updatePool(this.round.winner, this.round.winnerMove, this.round.lossMove);
-        //console.log(this.human); testing feature
-        //console.log(this.computer); testing feature
+        //console.log(this.human); testing
+        //console.log(this.computer); testing
         this.grandGame.updateScore(this.round.winner);
         this.grandGame.displayScore();
         if (this.grandGame.gotGrandWinner()) {
