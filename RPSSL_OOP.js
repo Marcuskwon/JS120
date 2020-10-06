@@ -113,15 +113,27 @@ function createHuman() {
       while (true) {
         console.log('Please choose rock, paper, scissors, spock, or lizard');
         choice = readline.question().toLowerCase();
-        if (Object.values(VALID_CHOICES).some(ele => ele.includes(choice))) {
-          choice = Object.keys(VALID_CHOICES).find(ele => VALID_CHOICES[ele].includes(choice));
-          break;
-        }
+        choice = this.parseMoveChoice(choice);
+        if (choice) break;
         console.log("Sorry, invalid choice. You must enter the full name for 'spock' and 'scissors'" );
       }
 
       this.move = choice;
     },
+
+    isValidChoice(choice) {
+      return Object.values(VALID_CHOICES).some(ele => {
+        return ele.includes(choice);
+      });
+    },
+
+    parseMoveChoice(choice) {
+      if (!this.isValidChoice(choice)) return false;
+
+      return Object.keys(VALID_CHOICES).find(ele => {
+        return ele.includes(choice);
+      });
+    }
   };
 
 
@@ -153,7 +165,7 @@ function createHistory() { //data structure of historical moves
     },
 
     displayDataHistory() {
-      if (yesOrNo('Do you want to see historical moves data?')) {
+      if (yesOrNo('Do you want to see historical moves data? Choose y/n')) {
         console.log('---------HUMAN HISTORY---------');
         console.log(this.humanHistory);
         console.log('--------COMPUTER HISTORY--------');
@@ -191,6 +203,7 @@ function createGrandGame() { //object of a set of grand game (5 wins)
 
     displayScore() {
       console.log(this.currentScore);
+      console.log('-----------------------------------------------------');
     },
 
     gotGrandWinner() {
@@ -234,9 +247,11 @@ const RPSGame = {
 
 
   play() {
+    console.clear();
     this.displayWelcomeMessage();
 
     while (true) {//loop until if the user doesn't want to play it
+    console.clear();
 
       while (true) { //loop until 5 wins
         this.human.choose();
