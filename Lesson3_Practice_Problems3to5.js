@@ -56,7 +56,7 @@ console.log(invoiceTotal(invoices)); // 31000
 
 ////////////////////////////////////////
 
-//2 i used Object.assign method
+//2 i used Object.assign method. same reason explained in answer 1
 function createPayment(phonePmt, internetPmt, amountPmt) {
   let pmtObj = {
     phone: 0,
