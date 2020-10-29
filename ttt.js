@@ -76,7 +76,7 @@ class Board {
   }
 
 
-  countMarkersFor(player, keys) { //going through an array (keys) and check how many of them are 'player' mark
+  countMarkersFor(player, keys) {
     let markers = keys.filter(key => {
       return this.squares[key].getMarker() === player.getMarker();
     });
@@ -84,7 +84,7 @@ class Board {
     return markers.length;
   }
 
-  displayWithClear() { //display and clear
+  displayWithClear() {
     console.clear();
     console.log("");
     console.log("");
@@ -170,7 +170,7 @@ class TTTGame {
     return arr.slice(0, arr.length - 1).join(split) + split + lastWord + ` ${arr[arr.length - 1]} `;
   }
 
-  constructor() { //TTTGame would have now board, human and computer properties
+  constructor() {
     this.scoreboard = new Scoreboard();
     this.board = new Board();
     this.human = new Human();
@@ -263,7 +263,7 @@ class TTTGame {
       console.log("");
     }
 
-    this.board.markSquareAt(choice, this.human.getMarker()); //marking implementation
+    this.board.markSquareAt(choice, this.human.getMarker());
   }
 
 
@@ -330,7 +330,7 @@ class TTTGame {
     }
   }
 
-  isWinner(player) { //checking if there is any winning row
+  isWinner(player) {
     return TTTGame.POSSIBLE_WINNING_ROWS.some(row => {
       return this.board.countMarkersFor(player, row) === 3;
     });
