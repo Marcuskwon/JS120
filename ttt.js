@@ -1,6 +1,7 @@
 let readline = require("readline-sync");
+const VALID_YES_OR_NO = ['y', 'n', 'yes', 'no'];
 
-class Square { // each square in an object form
+class Square {
   static UNUSED_SQUARE = " ";
   static HUMAN_MARKER = "X";
   static COMPUTER_MARKER = "O";
@@ -9,26 +10,33 @@ class Square { // each square in an object form
     this.marker = marker;
   }
 
-  toString() { //will return 'X', 'O', or ' '
-    return this.marker;
-  }
-
-  setMarker(marker) { //change marker
+  setMarker(marker) {
     this.marker = marker;
   }
 
-  isUnused() { // will check if is used or not
+  getMarker() {
+    return this.marker;
+  }
+
+  isUnused() {
     return this.marker === Square.UNUSED_SQUARE;
   }
 
-  getMarker() { // will return the marker in this square
+  toString() {
     return this.marker;
   }
+
 }
 
-class Board { 
+class Board {
+  static CENTER_SQUARE = '5';
+
   constructor() {
-    this.squares = {}; //this is an actual object that represent 'board'
+    this.reset();
+  }
+
+  reset() {
+    this.squares = {};
     for (let counter = 1; counter <= 9; ++counter) {
       this.squares[String(counter)] = new Square();
     }
@@ -58,10 +66,15 @@ class Board {
     return this.unusedSquares().length === 0;
   }
 
-  unusedSquares() { // return an array of keys(squares) whose values are ' '.
+  unusedSquares() {
     let keys = Object.keys(this.squares);
-    return keys.filter(key => this.squares[key].isUnused());
+    return keys.filter(key => this.isUnusedSquare(key));
   }
+
+  isUnusedSquare(key) {
+    return this.squares[key].isUnused();
+  }
+
 
   countMarkersFor(player, keys) { //going through an array (keys) and check how many of them are 'player' mark
     let markers = keys.filter(key => {
@@ -79,7 +92,7 @@ class Board {
   }
 }
 
-class Player { 
+class Player {
   constructor(marker) {
     this.marker = marker;
   }
@@ -101,6 +114,42 @@ class Computer extends Player {
   }
 }
 
+class Scoreboard {
+  static GRAND_WINS_REQUIARED = 3;
+
+  constructor() {
+    this.human = 0;
+    this.computer = 0;
+  }
+
+  reset() {
+    return {
+      human: 0,
+      computer: 0
+    };
+  }
+
+  displayScore() {
+    console.log(this);
+  }
+
+  increaseScore(player) {
+    if (player in this) this[player]++;
+  }
+
+  displayGrandWinner() {
+    console.log(`The Grand Winner is ${this.detectGrandWinner()}!!`);
+  }
+
+  detectGrandWinner() {
+    return Object.keys(this).find(key => this[key] === 3);
+  }
+
+  gotGrandWinner() {
+    return !!this.detectGrandWinner();
+  }
+}
+
 class TTTGame {
   static POSSIBLE_WINNING_ROWS = [
     [ "1", "2", "3" ],            // top row of board
@@ -113,29 +162,55 @@ class TTTGame {
     [ "3", "5", "7" ],            // diagonal: bottom-left to top-right
   ];
 
+  static joinOr(arr, split = ', ', lastWord = 'or') {
+    if (arr.length <= 2) {
+      return arr.join(` ${lastWord} `);
+    }
+
+    return arr.slice(0, arr.length - 1).join(split) + split + lastWord + ` ${arr[arr.length - 1]} `;
+  }
+
   constructor() { //TTTGame would have now board, human and computer properties
+    this.scoreboard = new Scoreboard();
     this.board = new Board();
     this.human = new Human();
     this.computer = new Computer();
+    this.firstPlayer = this.human;
   }
 
   play() {
     this.displayWelcomeMessage();
+    this.displayWinsRequired();
 
-    this.board.display();
     while (true) {
-      this.humanMoves();
-      if (this.gameOver()) break;
+      this.onePlay();
+      this.scoreboard.increaseScore(this.detectWinner());
+      this.scoreboard.displayScore();
+      if (this.scoreboard.gotGrandWinner()) break;
+      if (!this.playAgain()) break;
+      this.firstPlayer = this.togglePlayer(this.firstPlayer);
+    }
 
-      this.computerMoves();
+    this.scoreboard.displayGrandWinner();
+    this.displayGoodbyeMessage();
+  }
+
+
+  onePlay() {
+    let currentPlayer = this.firstPlayer;
+    this.board.reset();
+    this.board.display();
+
+    while (true) {
+      this.playerMoves(currentPlayer);
       if (this.gameOver()) break;
 
       this.board.displayWithClear();
+      currentPlayer = this.togglePlayer(currentPlayer);
     }
 
     this.board.displayWithClear();
     this.displayResults();
-    this.displayGoodbyeMessage();
   }
 
   displayWelcomeMessage() {
@@ -148,6 +223,10 @@ class TTTGame {
     console.log("Thanks for playing Tic Tac Toe! Goodbye!");
   }
 
+  displayWinsRequired() {
+    console.log(`Whoever first achieves ${Scoreboard.GRAND_WINS_REQUIARED} wins will be The Grand Winner!`);
+  }
+
   displayResults() {
     if (this.isWinner(this.human)) {
       console.log("You won! Congratulations!");
@@ -158,12 +237,24 @@ class TTTGame {
     }
   }
 
+  togglePlayer(player) {
+    return player === this.human ? this.computer : this.human;
+  }
+
+  playerMoves(currentPlayer) {
+    if (currentPlayer === this.computer) {
+      this.computerMoves();
+    } else {
+      this.humanMoves();
+    }
+  }
+
   humanMoves() {
     let choice;
 
     while (true) {
       let validChoices = this.board.unusedSquares();
-      const prompt = `Choose a square (${validChoices.join(", ")}): `;
+      const prompt = `Choose a square (${TTTGame.joinOr(validChoices)}): `;
       choice = readline.question(prompt);
 
       if (validChoices.includes(choice)) break;
@@ -175,15 +266,48 @@ class TTTGame {
     this.board.markSquareAt(choice, this.human.getMarker()); //marking implementation
   }
 
-  computerMoves() {
-    let validChoices = this.board.unusedSquares();
-    let choice;
 
-    do {
-      choice = Math.floor((9 * Math.random()) + 1).toString(); //random pick
-    } while (!validChoices.includes(choice)); // loop until the computer pick is valid
+  computerMoves() {
+    let choice = this.offensiveCompMove();
+    if (!choice) {
+      choice = this.defensiveCompMove();
+    }
+
+    if (!choice) {
+      choice = this.pickCenterSquare();
+    }
+
+    if (!choice) {
+      let validChoices = this.board.unusedSquares();
+      do {
+        choice = Math.floor((9 * Math.random()) + 1).toString();
+      } while (!validChoices.includes(choice));
+    }
 
     this.board.markSquareAt(choice, this.computer.getMarker());
+  }
+
+  pickCenterSquare() {
+    return this.board.isUnusedSquare(Board.CENTER_SQUARE) ?
+      Board.CENTER_SQUARE : null;
+  }
+
+  offensiveCompMove() {
+    return this.findAtRiskSquare(this.computer);
+  }
+
+  defensiveCompMove() {
+    return this.findAtRiskSquare(this.human);
+  }
+
+  findAtRiskSquare(player) {
+    let riskRow = TTTGame.POSSIBLE_WINNING_ROWS.find(row => {
+      return this.board.countMarkersFor(player, row) === 2 &&
+      row.some(square => this.board.isUnusedSquare(square));
+    });
+
+    if (!riskRow) return null;
+    return riskRow.find(square => this.board.isUnusedSquare(square));
   }
 
   gameOver() {
@@ -191,14 +315,38 @@ class TTTGame {
   }
 
   someoneWon() {
-    return this.isWinner(this.human) || this.isWinner(this.computer);
+    return this.detectWinner();
   }
 
-  isWinner(player) { //checking if there is any winning row 
+
+  detectWinner() {
+    if (this.isWinner(this.human)) {
+      return 'human';
+    }
+    if (this.isWinner(this.computer)) {
+      return 'computer';
+    } else {
+      return null;
+    }
+  }
+
+  isWinner(player) { //checking if there is any winning row
     return TTTGame.POSSIBLE_WINNING_ROWS.some(row => {
       return this.board.countMarkersFor(player, row) === 3;
     });
   }
+
+  playAgain() {
+    console.log("Play again (y/n)?");
+    let answer = readline.question().toLowerCase();
+    while (!VALID_YES_OR_NO.includes(answer)) {
+      console.log('Please choose yes or no');
+      answer = readline.question().toLowerCase();
+    }
+    console.clear();
+    return (answer === "y" || answer === "yes");
+  }
+
 }
 
 let game = new TTTGame();
