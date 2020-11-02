@@ -164,7 +164,8 @@ class TwentyOneGame {
     if (!this.anyoneBusted()) {
       this.dealerTurn();
     }
-    this.displayResult();
+    let winner = this.whoWon();
+    this.displayResult(winner);
     this.player.updatingCoin(this.whoWon());
     this.player.displayCoin();
     this.resetGame();
@@ -261,11 +262,11 @@ class TwentyOneGame {
   }
 
   anyoneBusted() {
-    return this.isBusted('player') === true || this.isBusted('dealer') === true;
+    return this.isBusted('player');
   }
 
   displayWelcomeMessage() {
-    console.log(`Weclome to 21! You have $${Player.INITIAL_MONEY}.00! Each game costs $1.00`);
+    console.log(`Welcome to 21! You have $${Player.INITIAL_MONEY}.00! Each game costs $1.00. The game ends your balance reahces $0.00 or $10.00`);
   }
 
   displayGoodbyeMessage() {
@@ -342,9 +343,9 @@ class TwentyOneGame {
   }
 
 
-  displayResult() {
-    if (this.whoWon()) {
-      console.log(`Winner is ${this.whoWon()}!!`);
+  displayResult(winner) {
+    if (winner) {
+      console.log(`Winner is ${winner}!!`);
     } else {
       console.log('How boring.. It is a tie');
     }
@@ -359,11 +360,7 @@ class TwentyOneGame {
       answer = readline.question().toLowerCase();
     }
 
-    if (answer === 'y' || answer === 'yes') {
-      return true;
-    } else {
-      return false;
-    }
+    return answer === 'y' || answer === 'yes';
   }
 
   resetGame() {
