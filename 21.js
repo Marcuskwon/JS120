@@ -11,6 +11,27 @@ class Card {
   constructor(suit, rank) {
     this.suit = suit;
     this.rank = rank;
+    this.hidden = false;
+  }
+
+  hide() {
+    this.hidden = true;
+  }
+
+  reveal() {
+    this.hidden = false;
+  }
+
+  isHidden() {
+    return this.hidden;
+  }
+
+  getRank() {
+    return this.rank;
+  }
+
+  getSuit() {
+    return this.suit;
   }
 }
 
@@ -19,12 +40,14 @@ class Deck {
     this.reset();
   }
 
-  pickOneCard() {
-    return this.cards[0];
+  dealFaceDown() {
+    let card = this.cards.shift();
+    card.hide();
+    return card;
   }
 
-  removeOneCard() {
-    this.cards.shift();
+  dealFaceUp() {
+    return this.cards.shift();
   }
 
   reset() {
@@ -51,83 +74,16 @@ class Deck {
 class TwentyOneParticipant {
   constructor() {
     this.hand = [];
-    this.point = 0;
-    this.bust = false;
   }
 
   receiveOneCard(card) {
     this.hand.push(card);
   }
 
-  bustUpdate() {
-    if (this.getPoint() > TwentyOneGame.MAX_NUMBER) {
-      this.bust = true;
-    }
-  }
-
-  isBusted() {
-    return this.bust;
-  }
-
-  isTwentyOne() {
-    return this.getPoint() === TwentyOneGame.MAX_NUMBER;
-  }
-
-  updatingPoint() {
-    let total = 0;
-
-    for (let index = 0; index < this.hand.length; index++) {
-      if (!isNaN(Number(this.hand[index].rank))) {
-        total += Number(this.hand[index].rank);
-      }
-      if ((isNaN(Number(this.hand[index].rank))) &&
-      (this.hand[index].rank !== 'Ace')) {
-        total += Card.JQK_VALUE;
-      }
-      if (this.hand[index].rank === 'Ace') {
-        continue;
-      }
-    }
-
-    total += this.decidingAceValue(this.hand, total);
-    this.point = total;
-  }
-
-  decidingAceValue(arr, total) {
-    let aceValTotal = 0;
-    for (let index = 0; index < arr.length; index++) {
-      if (arr[index].rank === 'Ace') {
-        if (total + Card.ACE_VALUE_ELEVEN <= TwentyOneGame.MAX_NUMBER) {
-          aceValTotal += Card.ACE_VALUE_ELEVEN;
-        } else {
-          aceValTotal += Card.ACE_VALUE_ONE;
-        }
-      }
-    }
-    return aceValTotal;
-  }
-
-  getPoint() {
-    return this.point;
-  }
-
-  resetAll() {
-    this.resetHand();
-    this.resetPoint();
-    this.resetBust();
-  }
-
   resetHand() {
     this.hand = [];
   }
 
-  resetPoint() {
-    this.point = 0;
-  }
-
-  resetBust() {
-    this.bust = false;
-  }
 }
 
 
@@ -167,9 +123,6 @@ class Dealer extends TwentyOneParticipant {
     super();
   }
 
-  isBiggerThanMin() {
-    return this.getPoint() >= TwentyOneGame.DEALER_MIN;
-  }
 }
 
 class TwentyOneGame {
@@ -218,17 +171,11 @@ class TwentyOneGame {
   }
 
   dealCards() {
-    this.player.receiveOneCard(this.deck.pickOneCard());
-    this.deck.removeOneCard();
-    this.player.receiveOneCard(this.deck.pickOneCard());
-    this.deck.removeOneCard();
-    this.player.updatingPoint();
+    this.player.receiveOneCard(this.deck.dealFaceUp());
+    this.player.receiveOneCard(this.deck.dealFaceUp());
 
-    this.dealer.receiveOneCard(this.deck.pickOneCard());
-    this.deck.removeOneCard();
-    this.dealer.updatingPoint();
-    this.dealer.receiveOneCard(this.deck.pickOneCard());
-    this.deck.removeOneCard();
+    this.dealer.receiveOneCard(this.deck.dealFaceUp());
+    this.dealer.receiveOneCard(this.deck.dealFaceDown());
   }
 
   showCardsWithClear() {
@@ -236,21 +183,21 @@ class TwentyOneGame {
     console.log('dealer has:');
 
     if (this.currentTurn === 'player') {
-      console.log([this.createCardList(this.dealer)[0], 'hidden card']);
-      console.log(`A total of: ${this.dealer.getPoint()}`);
+      console.log([this.createCardList('dealer')[0], 'hidden card']);
+      console.log(`A total of: ${this.calculatingPoint('dealer')}`);
     } else {
-      console.log(this.createCardList(this.dealer));
-      console.log(`A total of: ${this.dealer.getPoint()}`);
+      console.log(this.createCardList('dealer'));
+      console.log(`A total of: ${this.calculatingPoint('dealer')}`);
     }
     console.log('player has:');
-    console.log(this.createCardList(this.player));
-    console.log(`A total of: ${this.player.getPoint()}`);
+    console.log(this.createCardList('player'));
+    console.log(`A total of: ${this.calculatingPoint('player')}`);
   }
 
   createCardList(participant) {
     let cardList = [];
-    participant.hand.forEach(card => {
-      cardList.push([card.suit, card.rank]);
+    this[participant].hand.forEach(card => {
+      cardList.push([card.getSuit(), card.getRank()]);
     });
     return cardList;
   }
@@ -265,61 +212,56 @@ class TwentyOneGame {
 
   playerTurn() {
     while (true) {
-      if (this.player.isTwentyOne()) {
+      if (this.isTwentyOne('player')) {
         console.log('Your point is 21! Lucky you');
         break;
       }
-      if (this.player.isBusted()) {
+      if (this.isBusted('player')) {
         console.log('Player busted!');
         break;
       }
-
-      console.log('Do you want to hit or stay?');
-      let answer = readline.question().toLowerCase();
-
-      while (!TwentyOneGame.VALID_STAY_OR_HIT.includes(answer)) {
-        console.log("Not valid. Please choose '(h)it' or '(s)tay'");
-        answer = answer = readline.question().toLowerCase();
-      }
-
+      let answer = this.hitOrStay();
       if (answer === 's' || answer === 'stay') break;
       if (answer === 'h' || answer === 'hit') {
-        this.player.receiveOneCard(this.deck.pickOneCard());
-        this.deck.removeOneCard();
-        this.player.updatingPoint();
-        this.player.bustUpdate();
+        this.player.receiveOneCard(this.deck.dealFaceUp());
       }
       this.showCardsWithClear();
     }
   }
 
+  hitOrStay() {
+    console.log('Do you want to hit or stay?');
+    let answer = readline.question().toLowerCase();
+    while (!TwentyOneGame.VALID_STAY_OR_HIT.includes(answer)) {
+      console.log("Not valid. Please choose '(h)it' or '(s)tay'");
+      answer = readline.question().toLowerCase();
+    }
+    return answer;
+  }
+
   dealerTurn() {
-    this.dealer.updatingPoint();
+    this.dealer.hand[1].reveal();
 
     while (true) {
       this.showCardsWithClear();
-      if (this.dealer.isBusted()) {
+      if (this.isBusted('dealer')) {
         console.log('Dealer busted!');
         break;
       }
-      if (this.dealer.isTwentyOne()) {
+      if (this.isTwentyOne('dealer')) {
         break;
       }
-      if (this.dealer.isBiggerThanMin()) {
+      if (this.isBiggerThanMin('dealer')) {
         break;
       }
-
       this.wantToContinue();
-      this.dealer.receiveOneCard(this.deck.pickOneCard());
-      this.deck.removeOneCard();
-      this.dealer.updatingPoint();
-      this.dealer.bustUpdate();
+      this.dealer.receiveOneCard(this.deck.dealFaceUp());
     }
 
   }
 
   anyoneBusted() {
-    return this.player.isBusted() === true || this.dealer.isBusted() === true;
+    return this.isBusted('player') === true || this.isBusted('dealer') === true;
   }
 
   displayWelcomeMessage() {
@@ -336,15 +278,69 @@ class TwentyOneGame {
 
   whoWon() {
     if (this.anyoneBusted()) {
-      return this.dealer.isBusted() ? 'player' : 'dealer';
-    } else if ((TwentyOneGame.MAX_NUMBER - this.player.getPoint()) < (TwentyOneGame.MAX_NUMBER - this.dealer.getPoint())) {
+      return this.isBusted('dealer') ? 'player' : 'dealer';
+    } else if ((TwentyOneGame.MAX_NUMBER - this.calculatingPoint('player')) <
+              (TwentyOneGame.MAX_NUMBER - this.calculatingPoint('dealer'))) {
       return 'player';
-    } else if ((TwentyOneGame.MAX_NUMBER - this.player.getPoint()) > (TwentyOneGame.MAX_NUMBER - this.dealer.getPoint())) {
+    } else if ((TwentyOneGame.MAX_NUMBER - this.calculatingPoint('player')) >
+              (TwentyOneGame.MAX_NUMBER - this.calculatingPoint('dealer'))) {
       return 'dealer';
-    } else if ((TwentyOneGame.MAX_NUMBER - this.player.getPoint()) === (TwentyOneGame.MAX_NUMBER - this.dealer.getPoint())) {
-      return null;
     }
+    return null;
+
   }
+
+
+  isBusted(participant) {
+    return this.calculatingPoint(participant) > TwentyOneGame.MAX_NUMBER;
+  }
+
+  isTwentyOne(participant) {
+    return this.calculatingPoint(participant) === TwentyOneGame.MAX_NUMBER;
+  }
+
+  isBiggerThanMin(participant) {
+    return this.calculatingPoint(participant) >= TwentyOneGame.DEALER_MIN;
+  }
+
+  calculatingPoint(participant) {
+    let total = 0;
+
+    for (let index = 0; index < this[participant].hand.length; index++) {
+      if (!this[participant].hand[index].isHidden()) {
+        if (!isNaN(Number(this[participant].hand[index].getRank()))) {
+          total += Number(this[participant].hand[index].getRank());
+        }
+        if ((isNaN(Number(this[participant].hand[index].getRank()))) &&
+      (this[participant].hand[index].getRank() !== 'Ace')) {
+          total += Card.JQK_VALUE;
+        }
+        if (this[participant].hand[index].getRank() === 'Ace') {
+          continue;
+        }
+      }
+    }
+
+    total += this.decidingAceValue(this[participant].hand, total);
+    return total;
+  }
+
+  decidingAceValue(hand, total) {
+    let aceValTotal = 0;
+    for (let index = 0; index < hand.length; index++) {
+      if (!hand[index].isHidden()) {
+        if (hand[index].getRank() === 'Ace') {
+          if (total + Card.ACE_VALUE_ELEVEN <= TwentyOneGame.MAX_NUMBER) {
+            aceValTotal += Card.ACE_VALUE_ELEVEN;
+          } else {
+            aceValTotal += Card.ACE_VALUE_ONE;
+          }
+        }
+      }
+    }
+    return aceValTotal;
+  }
+
 
   displayResult() {
     if (this.whoWon()) {
@@ -370,10 +366,9 @@ class TwentyOneGame {
     }
   }
 
-
   resetGame() {
-    this.player.resetAll();
-    this.dealer.resetAll();
+    this.player.resetHand();
+    this.dealer.resetHand();
     this.switchPlayer();
     this.deck.reset();
   }
